@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Research Map: LLM-Driven Heuristic Design for EKM Scheduling</title>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Segoe UI', Roboto, Arial, sans-serif; background: #0f1117; color: #e6edf3; display: flex; height: 100vh; overflow: hidden; }
+    
+    #main-area { flex: 3; display: flex; flex-direction: column; height: 100%; position: relative; }
+    #toolbar {
+      padding: 12px 20px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      z-index: 10;
+    }
+    #toolbar h1 { margin: 0; font-size: 1.05rem; color: #58a6ff; letter-spacing: 0.3px; }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-btn {
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover { background: #30363d; }
+    .filter-btn.active { background: #1f6feb; color: #fff; border-color: #388bfd; }
+
+    #graph { flex: 1; width: 100%; height: 100%; }
+
+    #legend {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      background: rgba(22, 27, 34, 0.92);
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+    }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+    #panel {
+      flex: 1.25;
+      min-width: 340px;
+      max-width: 460px;
+      padding: 1.5rem;
+      background: #161b22;
+      border-left: 1px solid #30363d;
+      overflow-y: auto;
+    }
+    #panel h2 { color: #58a6ff; margin-top: 0.4rem; font-size: 1.1rem; line-height: 1.4; }
+    #panel .tag { display: inline-block; padding: 3px 9px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; letter-spacing: 0.5px; }
+    .tag.forecast { background: #1565c0; color: #fff; }
+    .tag.schedule { background: #2e7d32; color: #fff; }
+    .tag.llm { background: #ef6c00; color: #fff; }
+    .tag.core { background: #c62828; color: #fff; }
+    .tag.proposed { background: #d4a017; color: #111; }
+
+    #panel a { color: #58a6ff; text-decoration: none; font-weight: bold; }
+    #panel a:hover { text-decoration: underline; }
+    #panel .meta { color: #8b949e; font-size: 0.85rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #30363d; line-height: 1.5; }
+    #panel .block { margin-bottom: 1rem; font-size: 0.88rem; line-height: 1.55; color: #c9d1d9; }
+    #panel .block strong { color: #58a6ff; display: block; margin-bottom: 0.25rem; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.4px; }
+    .hint { color: #8b949e; font-style: italic; font-size: 0.9rem; line-height: 1.5; }
+    .summary-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin-top: 1rem; font-size: 0.85rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div id="main-area">
+    <div id="toolbar">
+      <h1>Research Map: LLM-Assisted Heuristic Design for AEV Scheduling</h1>
+      <div class="filters">
+        <button class="filter-btn active" onclick="filterGroup('all', this)">All Nodes</button>
+        <button class="filter-btn" onclick="filterGroup('core', this)">Core Papers</button>
+        <button class="filter-btn" onclick="filterGroup('forecast', this)">Forecasting</button>
+        <button class="filter-btn" onclick="filterGroup('schedule', this)">Scheduling</button>
+        <button class="filter-btn" onclick="filterGroup('llm', this)">LLM Heuristics</button>
+      </div>
+    </div>
+    <div id="graph"></div>
+    <div id="legend">
+      <div class="legend-item"><span class="dot" style="background:#c62828;"></span> Core Baseline Papers</div>
+      <div class="legend-item"><span class="dot" style="background:#d4a017;"></span> Proposed Research Direction (LLM-MMRSM)</div>
+      <div class="legend-item"><span class="dot" style="background:#1565c0;"></span> Spatiotemporal Demand Forecasting</div>
+      <div class="legend-item"><span class="dot" style="background:#2e7d32;"></span> Fleet Dispatching &amp; Bipartite Matching</div>
+      <div class="legend-item"><span class="dot" style="background:#ef6c00;"></span> LLM Automated Algorithm Design (AAD)</div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <h2>Research Map Overview</h2>
+    <p class="hint">Click any node in the graph to inspect paper details, limitations, and how it connects to the proposed methodology.</p>
+    <div class="summary-box">
+      <strong style="color:#d4a017; display:block; margin-bottom:6px;">Core Research Logic:</strong>
+      1. <b>Host Pipeline (Node 1):</b> Keep ASTGCN + Virtual Node generation + EKM constraints intact.<br><br>
+      2. <b>Target Bottleneck:</b> The MMRSM search heuristic relies on manually tuned weights (&beta;) and pruning thresholds (&theta;<sub>t</sub>).<br><br>
+      3. <b>Solution (Node 10 &amp; 12):</b> Adapt the <i>Generate&ndash;Evaluate&ndash;Evolve</i> loop (Seek &amp; Mend + Reflection) to automatically evolve Python search/pruning heuristics for MMRSM.
+    </div>
+  </div>
+
+  <script>
+    const nodesData = [
+      {
+        id: 1,
+        label: "Guo et al. (2027)\nASTGCN + EKM\n[DOMAIN CORE]",
+        group: "core",
+        authors: "Yuhan Guo, Hongao Wang, Haoran Wang, Hamid Allaoui, Youssef Boulaksil, Wenhua Li",
+        year: 2027,
+        title: "Forecast-guided multi-task scheduling for autonomous electric ride-hailing fleets under charging and maintenance constraints",
+        venue: "Expert Systems with Applications, 334, Article 134759",
+        abstract: "Proposes a forecast-guided rolling framework combining ASTGCN grid demand prediction with Virtual Node (VN) task conversion and Enhanced Kuhn-Munkres (EKM) multi-task assignment. Coordinates passenger orders, repositioning, charging, and maintenance under battery (SoC), health, and station capacity constraints. Uses Minimum Matching Residual Search Mechanism (MMRSM) to accelerate bipartite graph search from 22.45 s down to 1.42 s per window.",
+        pros: "Unifies 4 competing AEV tasks in a real-time rolling pipeline (79.76% matching rate, 6.68 min wait time, 1.42 s decision speed).",
+        cons: "The MMRSM residual priority formula h(x,y) = s(x,y) + beta*pi(tau(y)) and pruning threshold theta_t rely on manual heuristic rules without theoretical exactness guarantees.",
+        usefulness: "Primary host pipeline. ASTGCN, VN generation, and hard feasibility filters remain fixed; only the MMRSM search/pruning heuristic is replaced by an LLM-evolved function.",
+        connection: "Receives forecast from ASTGCN (4), builds upon IKM (2), compared against ALNS (3), and bridges the GAP with LLM-AAD (10) via Proposed LLM-MMRSM (12).",
+        link: "https://doi.org/10.1016/j.eswa.2026.134759"
+      },
+      {
+        id: 2,
+        label: "Guo et al. (2024)\nIKM",
+        group: "schedule",
+        authors: "Yuhan Guo, Wenhua Li, L. Xiao, Hamid Allaoui",
+        year: 2024,
+        title: "A prediction-based iterative Kuhn-Munkres approach for service vehicle reallocation in ride-hailing",
+        venue: "International Journal of Production Research, 62(10), 3690-3715",
+        abstract: "Proposes an iterative Kuhn-Munkres (KM) approach using demand predictions to reallocate service vehicles in ride-hailing systems, outperforming reactive matching baselines.",
+        pros: "Establishes predictive bipartite matching for vehicle reallocation.",
+        cons: "Lacks multi-task EV charging/maintenance constraints and search-space pruning acceleration.",
+        usefulness: "Shows the historical progression of the matching algorithm leading to EKM.",
+        connection: "Direct algorithmic predecessor to Guo et al. (2027) [Node 1].",
+        link: "https://doi.org/10.1080/00207543.2023.2247092"
+      },
+      {
+        id: 3,
+        label: "Ropke & Pisinger (2006)\nALNS",
+        group: "schedule",
+        authors: "Stefan Ropke, David Pisinger",
+        year: 2006,
+        title: "An Adaptive Large Neighborhood Search Heuristic for the Pickup and Delivery Problem with Time Windows",
+        venue: "Transportation Science, 40(4), 455-472",
+        abstract: "Introduces Adaptive Large Neighborhood Search (ALNS) using competing destroy-and-repair operators whose selection weights adapt over iterations.",
+        pros: "Strong metaheuristic baseline for routing and pickup-delivery scheduling.",
+        cons: "Operators are manually crafted and computationally heavy (~18.5 s per window in AEV experiments, near the 20 s real-time limit).",
+        usefulness: "Demonstrates why manual metaheuristics struggle with real-time latency compared to pruned bipartite matching.",
+        connection: "Benchmark scheduling baseline compared against EKM-ASTGCN (1).",
+        link: "https://doi.org/10.1287/trsc.1050.0135"
+      },
+      {
+        id: 4,
+        label: "Guo et al. (2019)\nASTGCN",
+        group: "forecast",
+        authors: "Shengnan Guo, Youfang Lin, Ning Feng, Chao Song, Huaiyu Wan",
+        year: 2019,
+        title: "Attention based spatial-temporal graph convolutional networks for traffic flow forecasting",
+        venue: "Proceedings of the AAAI Conference on Artificial Intelligence, 33(01), 922-929",
+        abstract: "Combines spatial graph convolution, temporal convolution, and dual attention mechanisms to capture dynamic spatial-temporal correlations in traffic networks.",
+        pros: "Captures non-stationary peak/off-peak demand spikes effectively; uses feedback-modulated adjacency in the host pipeline.",
+        cons: "Outputs regional grid counts rather than actionable vehicle-level assignments.",
+        usefulness: "Kept unchanged as the upstream demand perception backbone.",
+        connection: "Supplies grid demand predictions to Guo et al. (2027) [Node 1].",
+        link: "https://doi.org/10.1609/aaai.v33i01.3301922"
+      },
+      {
+        id: 5,
+        label: "Zhang et al. (2023)\nSTGAT",
+        group: "forecast",
+        authors: "T. Y. Zhang, Y. B. Wang, Z. C. Wei",
+        year: 2023,
+        title: "STGAT: A Spatio-Temporal Graph Attention Network for Travel Demand Prediction",
+        venue: "2023 International Conference on Networking and Network Applications (NaNA), pp. 434-439",
+        abstract: "Uses graph attention mechanisms to model spatial dependencies between urban grids and temporal demand sequences.",
+        pros: "Validates graph-attention modeling for urban travel demand.",
+        cons: "Focuses solely on prediction metrics without downstream fleet dispatch integration.",
+        usefulness: "Illustrates that forecasting architectures are mature, justifying our focus on downstream assignment heuristics.",
+        connection: "Alternative forecasting architecture compared to ASTGCN (4).",
+        link: "https://doi.org/10.1109/NaNA60121.2023.00078"
+      },
+      {
+        id: 6,
+        label: "Manibardo et al. (2022)\nDL Forecasting Review",
+        group: "forecast",
+        authors: "Eric L. Manibardo, Ibai Lana, Javier Del Ser",
+        year: 2022,
+        title: "Deep learning for road traffic forecasting: Does it make a difference?",
+        venue: "IEEE Transactions on Intelligent Transportation Systems, 23(7), 6164-6188",
+        abstract: "Critically evaluates deep learning traffic forecasting models against classical baselines, showing that marginal gains in prediction accuracy often yield diminishing operational returns.",
+        pros: "Provides strong justification for focusing on decision-making integration rather than tweaking neural network layers.",
+        cons: "Survey paper; does not propose an optimization algorithm.",
+        usefulness: "Supports our research motivation: improving the EKM search heuristic brings higher operational value than modifying ASTGCN.",
+        connection: "Conceptual critique informing the design philosophy of ASTGCN (4) -> EKM (1).",
+        link: "https://doi.org/10.1109/TITS.2021.3083957"
+      },
+      {
+        id: 7,
+        label: "Romera-Paredes et al. (2024)\nFunSearch",
+        group: "llm",
+        authors: "Bernardino Romera-Paredes et al.",
+        year: 2024,
+        title: "Mathematical discoveries from program search with large language models",
+        venue: "Nature, 625(7995), 468-475",
+        abstract: "Pairs a pretrained LLM with an automated evaluator in an evolutionary loop to discover novel Python heuristic programs for combinatorial problems.",
+        pros: "Establishes the foundational Generate-Evaluate-Evolve paradigm for program search.",
+        cons: "Uses simple mutation prompts without structured verbal reflection or multi-strategy refinement.",
+        usefulness: "Conceptual ancestor for using an LLM to write executable Python scoring/pruning functions.",
+        connection: "Inspires EoH (8) and ReEvo (11).",
+        link: "https://doi.org/10.1038/s41586-023-06924-6"
+      },
+      {
+        id: 8,
+        label: "Liu et al. (2024)\nEoH",
+        group: "llm",
+        authors: "Fei Liu, Tong Xialiang, Mingxuan Yuan, Xi Lin, Fu Luo, Zhenkun Wang, Zhichao Lu, Qingfu Zhang",
+        year: 2024,
+        title: "Evolution of heuristics: Towards efficient automatic algorithm design using large language model",
+        venue: "Proceedings of the 41st International Conference on Machine Learning (ICML)",
+        abstract: "Introduces Evolution of Heuristics (EoH), co-evolving both natural language 'Thoughts' (heuristic ideas) and executable 'Code' using specialized exploration and modification prompts.",
+        pros: "Separates high-level algorithmic reasoning from code syntax, achieving high efficiency on combinatorial benchmarks.",
+        cons: "Tested on static combinatorial benchmarks rather than rolling-horizon dynamic fleet simulators.",
+        usefulness: "Provides the dual 'Thought + Code' representation template for evolving MMRSM functions.",
+        connection: "Extends FunSearch (7); directly extended by LLM-AAD (10) and parallel to HSEvo (9).",
+        link: "https://arxiv.org/abs/2401.02051"
+      },
+      {
+        id: 9,
+        label: "Dat et al. (2025)\nHSEvo",
+        group: "llm",
+        authors: "Pham Vu Tuan Dat, Long Doan, Huynh Thi Thanh Binh",
+        year: 2025,
+        title: "HSEvo: Elevating automatic heuristic design with diversity-driven harmony search and genetic algorithm using LLMs",
+        venue: "Proceedings of the AAAI Conference on Artificial Intelligence, 39, 26931-26938",
+        abstract: "Combines LLM heuristic generation with harmony search and diversity metrics to prevent premature convergence during heuristic evolution.",
+        pros: "Maintains population diversity and tunes continuous parameters inside generated heuristics.",
+        cons: "Adds extra algorithmic complexity if basic evolutionary operators already converge well.",
+        usefulness: "Serves as a backup diversity-preservation strategy if LLM-generated MMRSM heuristics converge too early.",
+        connection: "Parallel evolutionary variant to EoH (8).",
+        link: "https://arxiv.org/abs/2412.14995"
+      },
+      {
+        id: 10,
+        label: "Wang et al. (2026)\nLLM-AAD\n[METHOD CORE]",
+        group: "core",
+        authors: "Yiyang Wang, Lanyue Zhang, Yuhan Guo, Lingxiao Wu",
+        year: 2026,
+        title: "Towards automated optimization algorithm design with LLM: An exploratory study in multi-objective weather routing",
+        venue: "Transportation Research Part E: Logistics and Transportation Review, 210, Article 104786",
+        abstract: "Introduces LLM-AAD using DeepSeek-V3 to automatically design and evolve Genetic Algorithm operators via 'Seek' (S1: differentiated, S2: similarity-based) and 'Mend' (M1: structural refinement, M2: parameter tuning) prompt strategies within an iterative evaluation loop.",
+        pros: "Directly proven by our research group in transportation optimization; balances exploration (Seek) and exploitation (Mend) with quantitative fitness feedback.",
+        cons: "Applied to maritime weather routing (crossover/mutation operators) rather than real-time urban AEV bipartite graph matching.",
+        usefulness: "Primary methodological template. We adapt its Seek/Mend evolutionary loop and fitness evaluation structure to optimize MMRSM.",
+        connection: "Extends EoH (8); connects to Guo et al. (2027) [Node 1] via the Proposed Method (12).",
+        link: "https://doi.org/10.1016/j.tre.2026.104786"
+      },
+      {
+        id: 11,
+        label: "Ye et al. (2024)\nReEvo",
+        group: "llm",
+        authors: "Haoran Ye, Jiarui Wang, Zhiguang Cao, Federico Berto, Chuanbo Hua, Haeyeon Kim, Jinkyoo Park, Guojie Song",
+        year: 2024,
+        title: "ReEvo: Large Language Models as Hyper-Heuristics with Reflective Evolution",
+        venue: "Advances in Neural Information Processing Systems (NeurIPS 2024)",
+        abstract: "Enhances evolutionary heuristic search by prompting the LLM to perform short-term and long-term verbal reflections on why certain heuristics outperform others before generating new mutations.",
+        pros: "Gives the LLM explicit diagnostic feedback (e.g., why SMR dropped or ACT increased) rather than blind code mutation.",
+        cons: "Requires slightly more LLM tokens per generation due to reflection steps.",
+        usefulness: "Can be integrated into the 'Mend' step of LLM-AAD so the LLM diagnoses simulator metrics (SMR, VAWT, ACT) before refining MMRSM.",
+        connection: "Enhances FunSearch (7) & EoH (8); informs Proposed Method (12).",
+        link: "https://arxiv.org/abs/2402.01145"
+      },
+      {
+        id: 12,
+        label: "Proposed Research (2026)\nLLM-Evolved MMRSM\n[TARGET APPROACH]",
+        group: "proposed",
+        authors: "Briliona - Supervised by Prof. Yuhan Guo",
+        year: 2026,
+        title: "Automated Search Heuristic Design via LLM Evolutionary Loop for Forecast-Guided AEV Multi-Task Scheduling",
+        venue: "Research Design ",
+        abstract: "Integrates the LLM-AAD (Seek & Mend + Reflective Feedback) evolutionary framework into the EKM-ASTGCN rolling-horizon pipeline. Instead of relying on static hand-crafted residual weights and pruning thresholds in MMRSM, an LLM iteratively generates, evaluates on the Didi Chengdu simulator, and refines Python search-guidance functions to maximize SMR and minimize VAWT, nDSD, and ACT.",
+        pros: "Adapts search pruning dynamically to fleet SoC, health states, and peak/off-peak graph density without manual parameter tuning.",
+        cons: "Requires offline evolutionary training time on simulator instances before online deployment.",
+        usefulness: "Bridges the exact research gap between Node 10 (LLM-AAD) and Node 1 (EKM-ASTGCN).",
+        connection: "Adapts LLM-AAD (10) + ReEvo (11) to replace the manual MMRSM module inside Guo et al. (2027) [Node 1].",
+        link: ""
+      }
+    ];
+
+    const edgesData = [
+      { from: 2, to: 1, label: "predecessor" },
+      { from: 3, to: 1, label: "baseline heuristic" },
+      { from: 4, to: 1, label: "forecast backbone" },
+      { from: 5, to: 4, label: "alternative" },
+      { from: 6, to: 4, label: "motivates focus" },
+      { from: 7, to: 8, label: "inspires" },
+      { from: 7, to: 11, label: "inspires" },
+      { from: 8, to: 9, label: "parallel variant" },
+      { from: 8, to: 10, label: "extends" },
+      { from: 10, to: 1, label: "GAP: not yet applied", dashes: true, color: { color: "#ff5252" }, width: 2 },
+      { from: 10, to: 12, label: "adapts Seek/Mend loop", color: { color: "#d4a017" }, width: 2.5 },
+      { from: 11, to: 12, label: "adds reflection", dashes: true, color: { color: "#d4a017" } },
+      { from: 12, to: 1, label: "replaces manual MMRSM", color: { color: "#d4a017" }, width: 2.5 }
+    ];
+
+    const groupColors = {
+      forecast: { background: "#1565c0", border: "#42a5f5" },
+      schedule: { background: "#2e7d32", border: "#66bb6a" },
+      llm:      { background: "#ef6c00", border: "#ffa726" },
+      core:     { background: "#c62828", border: "#ef5350" },
+      proposed: { background: "#b8860b", border: "#ffd54f" }
+    };
+
+    const allNodes = nodesData.map(n => ({
+      id: n.id,
+      label: n.label,
+      group: n.group,
+      shape: "box",
+      font: { color: "#ffffff", size: 13, face: "Segoe UI, Arial" },
+      color: groupColors[n.group],
+      margin: 12,
+      borderWidth: (n.group === "core" || n.group === "proposed") ? 3.5 : 1.5,
+      shadow: (n.group === "core" || n.group === "proposed") ? { enabled: true, color: "rgba(0,0,0,0.5)", size: 8 } : false
+    }));
+
+    const nodes = new vis.DataSet(allNodes);
+    const edges = new vis.DataSet(edgesData);
+
+    const container = document.getElementById("graph");
+    const options = {
+      edges: {
+        font: { color: "#8b949e", size: 11, align: "middle", strokeWidth: 3, strokeColor: "#0f1117" },
+        color: { color: "#484f58", highlight: "#58a6ff" },
+        smooth: { type: "dynamic" },
+        arrows: { to: { enabled: true, scaleFactor: 0.75 } }
+      },
+      physics: {
+        enabled: true,
+        barnesHut: { gravitationalConstant: -11000, springLength: 230, springConstant: 0.04 }
+      },
+      interaction: { hover: true, tooltipDelay: 100 }
+    };
+
+    const network = new vis.Network(container, { nodes, edges }, options);
+
+    function filterGroup(group, btn) {
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      if (group === "all") {
+        nodes.clear();
+        nodes.add(allNodes);
+      } else if (group === "core") {
+        nodes.clear();
+        nodes.add(allNodes.filter(n => n.group === "core" || n.group === "proposed"));
+      } else {
+        nodes.clear();
+        nodes.add(allNodes.filter(n => n.group === group || n.group === "core" || n.group === "proposed"));
+      }
+      network.fit({ animation: true });
+    }
+
+    network.on("click", function (params) {
+      const panel = document.getElementById("panel");
+      if (params.nodes.length === 0) {
+        panel.innerHTML = `
+          <h2>Research Map Overview</h2>
+          <p class="hint">Click any node in the graph to inspect paper details, limitations, and how it connects to the proposed methodology.</p>
+          <div class="summary-box">
+            <strong style="color:#d4a017; display:block; margin-bottom:6px;">Core Research Logic:</strong>
+            1. <b>Host Pipeline (Node 1):</b> Keep ASTGCN + Virtual Node generation + EKM constraints intact.<br><br>
+            2. <b>Target Bottleneck:</b> The MMRSM search heuristic relies on manually tuned weights (&beta;) and pruning thresholds (&theta;<sub>t</sub>).<br><br>
+            3. <b>Solution (Node 10 &amp; 12):</b> Adapt the <i>Generate&ndash;Evaluate&ndash;Evolve</i> loop (Seek &amp; Mend + Reflection) to automatically evolve Python search/pruning heuristics for MMRSM.
+          </div>`;
+        return;
+      }
+      const p = nodesData.find(n => n.id === params.nodes[0]);
+      if (!p) return;
+      panel.innerHTML = `
+        <span class="tag ${p.group}">${p.group.toUpperCase()}</span>
+        <h2>${p.title}</h2>
+        <div class="meta">
+          <strong>Authors:</strong> ${p.authors}<br>
+          <strong>Year:</strong> ${p.year}<br>
+          <strong>Venue:</strong> ${p.venue}
+        </div>
+        <div class="block"><strong>Abstract / Summary</strong>${p.abstract}</div>
+        <div class="block"><strong>Strengths (Pros)</strong>${p.pros}</div>
+        <div class="block"><strong>Limitations / Gap (Cons)</strong>${p.cons}</div>
+        <div class="block"><strong>Role in My Research</strong>${p.usefulness}</div>
+        <div class="block"><strong>Connection to Other Works</strong>${p.connection}</div>
+        ${p.link ? `<p><a href="${p.link}" target="_blank">Open Paper DOI / Link &rarr;</a></p>` : ""}
+      `;
+    });
+  </script>
+</body>
+</html>
